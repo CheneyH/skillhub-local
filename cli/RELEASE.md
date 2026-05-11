@@ -6,31 +6,21 @@ The CLI release process is automated via GitHub Actions. Pushing a `cli-v*` tag 
 
 ## Prerequisites
 
-### npm Trusted Publishing (Recommended)
+### Required Secrets
 
-This workflow uses [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) via OIDC. No long-lived tokens needed.
+Configure these in GitHub repository settings → Secrets and variables → Actions:
 
-**One-time setup on npm**:
-
-1. Publish the package once manually (npm requires the package to exist before adding a trusted publisher), or have a maintainer create it
-2. Go to https://www.npmjs.com/package/@platypup/skillhub/access
-3. Under **Trusted Publisher**, click **Add trusted publisher**
-4. Configure:
-   - **Publisher**: GitHub Actions
-   - **Organization or user**: `iflytek`
-   - **Repository**: `skillhub`
-   - **Workflow filename**: `release-cli.yml`
-   - **Environment**: leave empty (or set if you use deployment environments)
-
-That's it — no secrets to manage. The workflow proves its identity to npm via OIDC at publish time.
+- `NPM_TOKEN`: npm authentication token with publish permissions
+  - Generate at https://www.npmjs.com/settings/YOUR_USERNAME/tokens
+  - Use **Classic Automation Token** (bypasses 2FA automatically), or
+  - Use **Granular Access Token** with "Allow bypass 2FA" enabled and scoped to the package
 
 ### Optional Variables
 
 Configure these in GitHub repository settings → Secrets and variables → Actions → Variables:
 
 - `NPM_REGISTRY`: npm registry URL (default: `https://registry.npmjs.org`)
-  - Only needed for custom registries (e.g., Verdaccio)
-  - Note: Trusted Publishing only works with `registry.npmjs.org`
+  - For custom registries (e.g., Verdaccio, GitHub Packages)
 
 ### Package Configuration
 
@@ -78,9 +68,9 @@ The workflow performs these steps:
    - Build the CLI
    - Verify built version matches package.json
 
-2. **Publish to npm** (via Trusted Publishing / OIDC)
+2. **Publish to npm** (if `NPM_TOKEN` is configured)
    - Check if version already exists on registry
-   - Publish package with `--provenance` flag (cryptographic build attestation)
+   - Publish package if version is new
    - Skip if version already published
 
 3. **Create GitHub Release**
@@ -135,8 +125,8 @@ If the workflow fails with "version already exists":
 
 ### npm Publish Fails
 
-- **`Forbidden` / OIDC errors**: Verify trusted publisher config on npm matches the workflow exactly (org, repo, workflow filename)
-- **`No matching trusted publisher`**: The package must exist on npm before trusted publisher can be added — bootstrap the first version via `npm publish` locally
+- **403 Forbidden with 2FA message**: Token is not an Automation Token or doesn't have bypass 2FA enabled — regenerate with the correct type
+- Verify `NPM_TOKEN` secret is valid and has publish permissions
 - Check package name matches your npm organization scope
 - Ensure `publishConfig.access` is set to `public`
 

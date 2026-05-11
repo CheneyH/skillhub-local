@@ -87,21 +87,9 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: ${{ !inputs.skip_npm }}
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          registry-url: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
-
-      - name: Upgrade npm for Trusted Publishing
-        run: npm install -g npm@latest
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -132,11 +120,29 @@ jobs:
             echo "Version $VERSION already exists on registry, skipping publish"
           fi
 
-      - name: Publish to npm via Trusted Publishing
+      - name: Configure npm authentication
+        if: steps.check_npm.outputs.exists == 'false'
+        env:
+          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          REGISTRY_HOST="${NPM_REGISTRY#http://}"
+          REGISTRY_HOST="${REGISTRY_HOST#https://}"
+          REGISTRY_HOST="${REGISTRY_HOST%/}"
+
+          cat > ~/.npmrc <<EOF
+          registry=${NPM_REGISTRY}
+          //${REGISTRY_HOST}/:_authToken=${NPM_TOKEN}
+          always-auth=true
+          EOF
+
+      - name: Publish to npm
         if: steps.check_npm.outputs.exists == 'false'
         working-directory: cli
+        env:
+          NPM_REGISTRY: ${{ vars.NPM_REGISTRY || 'https://registry.npmjs.org' }}
         run: |
-          npm publish --access public --provenance
+          npm publish --access public --registry "$NPM_REGISTRY"
           echo "Published ${{ needs.build-and-test.outputs.package_name }}@${{ needs.build-and-test.outputs.version }}"
 
   create-release:
