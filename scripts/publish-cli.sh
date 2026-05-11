@@ -53,12 +53,34 @@ fi
 log_stage "pulling latest from origin/$CURRENT_BRANCH"
 git -C "$REPO_ROOT" pull --ff-only origin "$CURRENT_BRANCH"
 
+log_stage "fetching tags from origin"
+git -C "$REPO_ROOT" fetch --tags --prune origin
+
+log_stage "resolving baseline version from latest cli-v* tag"
+LATEST_TAG="$(git -C "$REPO_ROOT" tag --list 'cli-v*' --sort=-version:refname | head -n1)"
+if [[ -n "$LATEST_TAG" ]]; then
+  BASE_VERSION="${LATEST_TAG#cli-v}"
+  CURRENT_PKG_VERSION="$(node -p "require('$PACKAGE_JSON').version")"
+  if [[ "$BASE_VERSION" != "$CURRENT_PKG_VERSION" ]]; then
+    log_stage "syncing package.json $CURRENT_PKG_VERSION -> $BASE_VERSION (from $LATEST_TAG)"
+    node -e "
+      const fs = require('fs');
+      const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
+      pkg.version = '$BASE_VERSION';
+      fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
+    "
+  fi
+else
+  log_stage "no cli-v* tags found, bumping from package.json"
+fi
+
 log_stage "bumping version ($BUMP_TYPE)"
 NPM_VERSION_OUTPUT="$(cd "$CLI_DIR" && npm version "$BUMP_TYPE" --no-git-tag-version)"
 NEW_VERSION="${NPM_VERSION_OUTPUT#v}"
 
 if [[ -z "$NEW_VERSION" ]]; then
   echo "failed to parse version from npm output: $NPM_VERSION_OUTPUT" >&2
+  git -C "$REPO_ROOT" checkout -- "$PACKAGE_JSON"
   exit 1
 fi
 
