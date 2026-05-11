@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { CLI_VERSION } from '../../../src/shared/constants'
+import { CLI_PACKAGE_NAME, CLI_VERSION } from '../../../src/shared/constants'
 import { CliError } from '../../../src/shared/errors'
 import { updateCommand, type UpdateCommandDeps } from '../../../src/commands/update'
 import type { InstallMode } from '../../../src/platform/package-manager'
@@ -61,7 +61,7 @@ describe('updateCommand branches', () => {
     const deps = buildDeps({ latest: '99.0.0', mode: 'npx', runResult: { success: true, output: '' } })
     const out = await updateCommand({}, deps)
     expect(out).toContain(`Update available: ${CLI_VERSION} -> 99.0.0`)
-    expect(out).toContain('npx @astron-team/skillhub')
+    expect(out).toContain(`npx ${CLI_PACKAGE_NAME}`)
   })
 
   test('available-not-updated branch — npx mode (--json)', async () => {
@@ -73,7 +73,7 @@ describe('updateCommand branches', () => {
     expect(parsed.from).toBe(CLI_VERSION)
     expect(parsed.to).toBe('99.0.0')
     expect(typeof parsed.next).toBe('string')
-    expect(parsed.next).toContain('npx @astron-team/skillhub')
+    expect(parsed.next).toContain(`npx ${CLI_PACKAGE_NAME}`)
   })
 
   test('error branch — npm-global with run() failure throws CliError', async () => {

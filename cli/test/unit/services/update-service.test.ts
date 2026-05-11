@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { UpdateService } from '../../../src/services/update-service'
+import { CLI_PACKAGE_NAME } from '../../../src/shared/constants'
 
 describe('UpdateService', () => {
   test('npx install mode only suggests next command', async () => {
@@ -13,7 +14,7 @@ describe('UpdateService', () => {
     const result = await service.update({ checkOnly: false })
 
     expect(result.updated).toBe(false)
-    expect(result.next).toContain('npx @astron-team/skillhub@latest')
+    expect(result.next).toContain(`npx ${CLI_PACKAGE_NAME}@latest`)
   })
 
   test('npm-global install mode runs npm update', async () => {
@@ -28,7 +29,7 @@ describe('UpdateService', () => {
     const result = await service.update({ checkOnly: false })
 
     expect(result.updated).toBe(true)
-    expect(executed).toEqual(['npm', 'install', '-g', '@astron-team/skillhub@latest'])
+    expect(executed).toEqual(['npm', 'install', '-g', `${CLI_PACKAGE_NAME}@latest`])
   })
 
   test('bun-global install mode runs bun update', async () => {
@@ -43,7 +44,7 @@ describe('UpdateService', () => {
     const result = await service.update({ checkOnly: false })
 
     expect(result.updated).toBe(true)
-    expect(executed).toEqual(['bun', 'add', '-g', '@astron-team/skillhub@latest'])
+    expect(executed).toEqual(['bun', 'add', '-g', `${CLI_PACKAGE_NAME}@latest`])
   })
 
   test('unknown install mode only suggests next command', async () => {
