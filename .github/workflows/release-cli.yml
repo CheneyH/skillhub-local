@@ -31,6 +31,30 @@ jobs:
         with:
           bun-version: 1.3.13
 
+      - name: Extract version from tag
+        id: extract
+        working-directory: cli
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if [[ ! "$TAG" =~ ^cli-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+            echo "Invalid tag format: $TAG (expected cli-vX.Y.Z)"
+            exit 1
+          fi
+          VERSION="${BASH_REMATCH[1]}"
+
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "Version set to: $VERSION"
+          echo "Package name: $PACKAGE_NAME"
+
       - name: Install dependencies
         working-directory: cli
         run: bun install --frozen-lockfile
@@ -51,24 +75,13 @@ jobs:
         working-directory: cli
         run: bun run build
 
-      - name: Extract version info
-        id: extract
-        working-directory: cli
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "Extracted version: $VERSION"
-          echo "Package name: $PACKAGE_NAME"
-
       - name: Verify built CLI
         working-directory: cli
         run: |
           node dist/index.js version
           RUNTIME_VERSION=$(node dist/index.js version | sed -E 's/^SkillHub CLI //')
           if [ "$RUNTIME_VERSION" != "${{ steps.extract.outputs.version }}" ]; then
-            echo "Version mismatch: runtime=$RUNTIME_VERSION, package.json=${{ steps.extract.outputs.version }}"
+            echo "Version mismatch: runtime=$RUNTIME_VERSION, tag=${{ steps.extract.outputs.version }}"
             exit 1
           fi
 
@@ -95,6 +108,17 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
+
+      - name: Set version from tag
+        working-directory: cli
+        run: |
+          VERSION="${{ needs.build-and-test.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
 
       - name: Install dependencies
         working-directory: cli

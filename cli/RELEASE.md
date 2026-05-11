@@ -37,36 +37,33 @@ Ensure `cli/package.json` has the correct organization scope:
 
 ## Release Process
 
-### 1. Update Version
+### Tag is the source of truth
 
-Update the version in `cli/package.json`:
+The CLI version is derived from the git tag name (`cli-vX.Y.Z`). You don't need to bump `cli/package.json` locally — the workflow does it automatically during the build.
 
-```bash
-cd cli
-npm version patch  # or minor, or major
-```
-
-This updates `package.json` and creates a commit.
-
-### 2. Create and Push Tag
+### Create and Push Tag
 
 ```bash
-# Create tag matching the new version
-git tag cli-v0.1.5
-
-# Push tag to trigger workflow
-git push origin cli-v0.1.5
+# From any clean working tree
+git tag cli-v0.1.8
+git push origin cli-v0.1.8
 ```
 
-### 3. Workflow Execution
+That's the entire release procedure. The workflow takes over from here.
+
+> `cli/package.json` on `main` may lag behind the latest published version. This is intentional — the tag is the release record, not `package.json`. If you want to keep them in sync, bump `package.json` in a regular PR before tagging.
+
+### Workflow Execution
 
 The workflow performs these steps:
 
 1. **Build and Test**
+   - Extract version from tag name (e.g., `cli-v0.1.8` → `0.1.8`)
+   - Write version into `cli/package.json`
    - Install dependencies with Bun
    - Run linter, type checker, and tests
    - Build the CLI
-   - Verify built version matches package.json
+   - Verify built version matches the tag
 
 2. **Publish to npm** (if `NPM_TOKEN` is configured)
    - Check if version already exists on registry
@@ -78,13 +75,13 @@ The workflow performs these steps:
    - Generate SHA256 checksums
    - Create GitHub release with artifacts
 
-### 4. Verify Release
+### Verify Release
 
 Check the following:
 
 - GitHub Actions workflow completed successfully
 - GitHub Release created at https://github.com/iflytek/skillhub/releases
-- Package published to npm (if configured): `npm view @your-org/skillhub@0.1.5`
+- Package published to npm (if configured): `npm view @platypup/skillhub@0.1.8`
 
 ## Manual Trigger
 
@@ -92,7 +89,7 @@ You can manually trigger the workflow from GitHub Actions UI:
 
 1. Go to Actions → Release CLI
 2. Click "Run workflow"
-3. Enter tag name (e.g., `cli-v0.1.5`)
+3. Enter tag name (e.g., `cli-v0.1.8`) — must follow `cli-vX.Y.Z` format
 4. Optionally skip npm publish
 
 ## Local Testing
@@ -119,9 +116,8 @@ make publish-cli-dry
 
 If the workflow fails with "version already exists":
 
-1. Check current published version: `npm view @your-org/skillhub version`
-2. Update `cli/package.json` to a newer version
-3. Create a new tag
+1. Check current published version: `npm view @platypup/skillhub version`
+2. Create a new tag with a higher version (e.g., `cli-v0.1.9`)
 
 ### npm Publish Fails
 
