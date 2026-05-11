@@ -275,32 +275,14 @@ lint-cli: ## CLI 代码检查
 typecheck-cli: ## CLI 类型检查
 	cd cli && bun run typecheck
 
-publish-cli: ## 发布 CLI 到 npm（patch 版本）
-	@if [ ! -f cli/.env.local ]; then \
-		echo "Error: cli/.env.local not found."; \
-		echo "Create cli/.env.local with NPM_TOKEN before publishing."; \
-		exit 1; \
-	fi
+publish-cli: ## 发布 CLI（patch 版本）- bump + tag + push，触发 CI 自动发布
 	./scripts/publish-cli.sh patch
 
-publish-cli-minor: ## 发布 CLI 到 npm（minor 版本）
-	@if [ ! -f cli/.env.local ]; then \
-		echo "Error: cli/.env.local not found."; \
-		echo "Create cli/.env.local with NPM_TOKEN before publishing."; \
-		exit 1; \
-	fi
+publish-cli-minor: ## 发布 CLI（minor 版本）- bump + tag + push，触发 CI 自动发布
 	./scripts/publish-cli.sh minor
 
-publish-cli-major: ## 发布 CLI 到 npm（major 版本）
-	@if [ ! -f cli/.env.local ]; then \
-		echo "Error: cli/.env.local not found."; \
-		echo "Create cli/.env.local with NPM_TOKEN before publishing."; \
-		exit 1; \
-	fi
+publish-cli-major: ## 发布 CLI（major 版本）- bump + tag + push，触发 CI 自动发布
 	./scripts/publish-cli.sh major
-
-publish-cli-dry: ## 发布 CLI 到 npm（dry run）
-	DRY_RUN=true ./scripts/publish-cli.sh patch
 
 db-reset: ## 重置数据库
 	$(DEV_COMPOSE) down -v --remove-orphans
